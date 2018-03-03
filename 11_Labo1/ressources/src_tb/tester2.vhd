@@ -13,9 +13,9 @@ begin
 
     process is
     begin
-        for i in 0 to 999 loop
+        for i in 0 to 5 loop
             wait for 10 ns;
-            logger.log_error;
+            logger.log_note("ceci est un test numéro 2");
         end loop;
 
         wait;

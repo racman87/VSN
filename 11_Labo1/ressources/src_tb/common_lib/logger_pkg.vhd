@@ -24,8 +24,6 @@ package logger_pkg is
 
         procedure final_report;
 
-        -- TODO : Complete
-
     end protected logger_t;
 
 end logger_pkg;
@@ -41,7 +39,7 @@ package body logger_pkg is
         variable set_severity_level : severity_level := note;
         variable L : line;
 
-        file report_file: text open WRITE_MODE is "../../../report_log.txt";
+        file report_file: text open WRITE_MODE is "../../report_log.txt";
 
         --------------------------------------------------------
         -- Procedure to call one to set the desired parameters
@@ -135,7 +133,6 @@ package body logger_pkg is
         --------------------------------------------------------
         procedure final_report is
         begin
-            -- TODO : Complete
             report "Nb errors = " & integer'image(nb_errors);
             report "Nb warnings = " & integer'image(nb_warnings);
         end final_report;
