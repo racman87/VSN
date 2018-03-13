@@ -28,9 +28,12 @@
 --------------------------------------------------------------------------------
 
 library ieee;
+library common_lib;
 use ieee.std_logic_1164.all;
 use IEEE.math_real.all;
 use ieee.numeric_std.all;
+use common_lib.logger_pkg.all;
+
 
 entity alu_tb is
     generic (
@@ -79,6 +82,8 @@ architecture testbench of alu_tb is
     constant c_SIZE : t_mode := "110";
     constant c_NULL : t_mode := "111";
 
+    -- Simply exports a logger that can be used accross entities
+    shared variable logger : common_lib.logger_pkg.logger_t;
 
 begin
 
@@ -105,22 +110,50 @@ begin
             a,b: in std_logic_vector(SIZE-1 downto 0);
             mode : in std_logic_vector(2 downto 0))
         is
-        --procedure set_sti(a,b,mode: in std_logic_vector) is
         begin
             a_sti <= a;
             b_sti <= b;
             mode_sti <= mode;
         end set_sti;
 
+        -------------------------------------------------
+        -- Procedure to test the observation
+        ------------------------------------------------
+        procedure test_obs(
+            s_ref : in std_logic_vector(SIZE-1 downto 0);
+            c_ref : in std_logic)
+        is
+        begin
+            --TODO
+            if s_obs /= s_ref then
+                report "output was kaput verified";
+            else
+                report "output was successfully verified";
+            end if;
+
+            if c_obs /= c_ref then
+                report "output was kaput verified";
+            else
+                report "output was successfully verified";
+            end if;
+
+        end test_obs;
+
     begin
         -- a_sti    <= default_value;
         -- b_sti    <= default_value;
         -- mode_sti <= default_value;
 
-        report "Starting simulation with ERRNO = " & integer'image(ERRNO);
+        logger.write_enable_file;
+        logger.set_severity(note);
+        logger.log_note("Starting simulation with ERRNO = " & integer'image(ERRNO));
+
+        --report "Starting simulation with ERRNO = " & integer'image(ERRNO);
 
         set_sti((others => '0'),(others => '0'), c_ADD);
-        wait for 10 ns;
+        wait for 5 ns;
+        test_obs((others => '1'),'0');
+        wait for 5 ns;
 
         set_sti((others => '1'),(others => '0'), c_SUB);
         wait for 10 ns;
