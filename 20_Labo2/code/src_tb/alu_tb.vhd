@@ -55,6 +55,8 @@ architecture testbench of alu_tb is
     signal sim_end_s : boolean := false;
     signal clk_sti : std_logic;
     signal i : integer :=0;
+    signal ref : std_logic_vector(SIZE-1 downto 0);
+    signal ref_c : std_logic;
 
     ---------------
     -- Constants --
@@ -123,6 +125,10 @@ begin
 -- Processus to set the stimulus
 --------------------------------------------------------------------------------
     stimulus_proc: process is
+        variable a, b, c: integer; --random integers
+        variable seed1, seed2: positive;    --seeds
+        variable rand: real;                --random output
+        --variable ref : std_logic_vector(SIZE-1 downto 0) := (others => '0');
 
         -------------------------------------------------
         -- Function to convert integer to std_logic_vector
@@ -147,6 +153,51 @@ begin
             mode_sti <= mode;
         end set_sti;
 
+        function create_ref(a,b,c : in integer) return std_logic_vector is
+            variable sum : integer;
+            variable result : std_logic_vector(SIZE-1 downto 0);
+        begin
+            case c is
+                when 0 => result := to_std_logic_vect(a + b);
+                when 1 => result := to_std_logic_vect(a - b);
+                when 2 => result := to_std_logic_vect(a) OR to_std_logic_vect(b);
+                when 3 => result := to_std_logic_vect(a) AND to_std_logic_vect(b);
+                when 4 => result := to_std_logic_vect(a);
+                when 5 => result := to_std_logic_vect(b);
+                when 6 =>
+                  if a = b then
+                      result:= (others => '1');
+                  else
+                      result:= (others => '0');
+                  end if;
+                when 7 => result := (others => '0');
+                when others => report "Unsupported mode_sti";
+            end case;
+            --result := to_std_logic_vect(sum);
+            return result;
+        end create_ref;
+
+        function create_carry(a,b,c : in integer) return std_logic is
+            variable result : std_logic;
+            variable value,a_s,b_s : std_logic_vector(SIZE downto 0);
+        begin
+            a_s:="0" & to_std_logic_vect(a);
+            b_s:="0" & to_std_logic_vect(b);
+            case c is
+                when 0 =>
+                    value :=std_logic_vector(unsigned(a_s)+unsigned(b_s));-- a + b;
+                when 1 =>
+                    value := std_logic_vector(unsigned(a_s)-unsigned(b_s));--a - b;
+                when others => report "Unsupported mode_sti";
+            end case;
+
+            result:='1';
+            if (c=0) then
+              result:=value(SIZE);
+            end if;
+            return result;
+        end create_carry;
+
     begin
         logger.write_enable_file;
         logger.set_severity(warning);
@@ -167,6 +218,40 @@ begin
                 when others => report "Unsupported mode_sti";
             end case;
         end loop;
+
+      -- Random tests
+      for i in 0 to (10-1) loop -- mettre 100 à la place de 10
+          wait until falling_edge(clk_sti);
+          wait for 2 ns;
+          -- Generate random stimulus betwwen 0..65535
+          UNIFORM(seed1, seed2, rand);
+          a := INTEGER(TRUNC(REAL(65535)*rand));
+          a_sti <= to_std_logic_vect(a);
+          UNIFORM(seed1, seed2, rand);
+          b := INTEGER(TRUNC(REAL(65535)*rand));
+          b_sti <= to_std_logic_vect(b);
+          -- Generate random stimulus betwwen 0..65535
+          UNIFORM(seed1, seed2, rand);
+          c := INTEGER(TRUNC(REAL(7)*rand));
+
+          case c is
+              when 0 => mode_sti <= c_ADD;
+              when 1 => mode_sti <= c_SUB;
+              when 2 => mode_sti <=  c_OR;
+              when 3 => mode_sti <= c_AND;
+              when 4 => mode_sti <= c_A;
+              when 5 => mode_sti <= c_B;
+              when 6 => mode_sti <= c_EQUAL;
+              when 7 => mode_sti <= c_NULL;
+              when others => report "Unsupported mode_sti";
+          end case;
+
+          ref <= create_ref(a, b, c);
+          if c=0 OR c=1 then
+              ref_c <= create_carry(a,b,c);
+          end if;
+
+      end loop;
 
         -- do something
         case TESTCASE is
@@ -288,6 +373,33 @@ begin
                 -- 0
                 when 7 => test_obs((others => '0'),'0');
                 when others => report "Unsupported mode";
+            end case;
+        end loop;
+
+
+        -- Random tests
+        for i in 0 to (10-1) loop -- mettre 100 à la place de 10
+            wait until rising_edge(clk_sti);
+            wait for 2 ns;
+            logger.log_note("The random mode is = " & integer'image(to_integer(unsigned(mode_sti))));
+            case mode_sti is
+              -- Addition
+              when c_ADD => test_obs(ref,ref_c);
+              -- Substraction
+              when c_SUB => test_obs(ref,ref_c);
+              -- OR
+              when c_OR => test_obs(ref,'0');
+              -- AND
+              when c_AND => test_obs(ref,'0');
+              -- A
+              when c_A => test_obs(ref,'0');
+              -- B
+              when c_B => test_obs(ref,'0');
+              -- A = B
+              when c_EQUAL => test_obs(ref,'0');
+              -- 0
+              when c_NULL => test_obs(ref,'0');
+              when others => report "Unsupported mode";
             end case;
         end loop;
 
