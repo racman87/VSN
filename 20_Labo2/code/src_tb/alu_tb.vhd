@@ -53,6 +53,13 @@ architecture testbench of alu_tb is
     signal mode_sti : std_logic_vector(2 downto 0);
 
     signal sim_end_s : boolean := false;
+    signal clk_sti : std_logic;
+    signal i : integer :=0;
+
+    ---------------
+    -- Constants --
+    ---------------
+    constant CLK_PERIOD : time := 10 ns;
 
     component alu is
     generic (
@@ -79,7 +86,7 @@ architecture testbench of alu_tb is
     constant c_AND : t_mode := "011";
     constant c_A : t_mode := "100";
     constant c_B : t_mode := "101";
-    constant c_SIZE : t_mode := "110";
+    constant c_EQUAL : t_mode := "110";
     constant c_NULL : t_mode := "111";
 
     -- Simply exports a logger that can be used accross entities
@@ -100,8 +107,32 @@ begin
         mode_i => mode_sti
     );
 
+--------------------------------------------------------------------------------
+-- Génération du signal de synchro
+--------------------------------------------------------------------------------
+    synchro_proc: process is
+    begin
+        while not sim_end_s loop
+            clk_sti <= '1', '0' after CLK_PERIOD/2;
+            wait for CLK_PERIOD;
+        end loop;
+        wait;
+    end process;
 
+--------------------------------------------------------------------------------
+-- Processus to set the stimulus
+--------------------------------------------------------------------------------
     stimulus_proc: process is
+
+        -------------------------------------------------
+        -- Function to convert integer to std_logic_vector
+        ------------------------------------------------
+        function to_std_logic_vect(val : in integer) return std_logic_vector is
+          variable result : std_logic_vector(SIZE-1 downto 0);
+        begin
+          result := std_logic_vector(to_unsigned(val,SIZE));
+          return result;
+        end to_std_logic_vect;
 
         -------------------------------------------------
         -- Procedure to set the stimulis
@@ -116,51 +147,26 @@ begin
             mode_sti <= mode;
         end set_sti;
 
-        -------------------------------------------------
-        -- Procedure to test the observation
-        ------------------------------------------------
-        procedure test_obs(
-            s_ref : in std_logic_vector(SIZE-1 downto 0);
-            c_ref : in std_logic)
-        is
-        begin
-            --TODO
-            if s_obs /= s_ref then
-                report "output was kaput verified";
-            else
-                report "output was successfully verified";
-            end if;
-
-            if c_obs /= c_ref then
-                report "output was kaput verified";
-            else
-                report "output was successfully verified";
-            end if;
-
-        end test_obs;
-
     begin
-        -- a_sti    <= default_value;
-        -- b_sti    <= default_value;
-        -- mode_sti <= default_value;
-
         logger.write_enable_file;
-        logger.set_severity(note);
-        logger.log_note("Starting simulation with ERRNO = " & integer'image(ERRNO));
+        logger.set_severity(warning);
+        logger.log_warning("Starting simulation with ERRNO = " & integer'image(ERRNO));
 
-        --report "Starting simulation with ERRNO = " & integer'image(ERRNO);
-
-        set_sti((others => '0'),(others => '0'), c_ADD);
-        wait for 5 ns;
-        test_obs((others => '1'),'0');
-        wait for 5 ns;
-
-        set_sti((others => '1'),(others => '0'), c_SUB);
-        wait for 10 ns;
-
-        set_sti((others => '1'),(others => '1'), C_A);
-        wait for 10 ns;
-
+        for i in 0 to 7 loop
+            wait until falling_edge(clk_sti);
+            wait for 2 ns;
+            case i is
+                when 0 => set_sti((others => '1'), to_std_logic_vect(1), c_ADD);
+                when 1 => set_sti((others => '1'),(others => '1'), c_SUB);
+                when 2 => set_sti((others => '1'),(others => '0'), c_OR);
+                when 3 => set_sti((others => '1'),(others => '0'), c_AND);
+                when 4 => set_sti(to_std_logic_vect(24),to_std_logic_vect(32), c_A);
+                when 5 => set_sti(to_std_logic_vect(10),to_std_logic_vect(53), c_B);
+                when 6 => set_sti(to_std_logic_vect(43),to_std_logic_vect(43), c_EQUAL);
+                when 7 => set_sti((others => '1'),(others => '1'), c_NULL);
+                when others => report "Unsupported mode_sti";
+            end case;
+        end loop;
 
         -- do something
         case TESTCASE is
@@ -169,6 +175,129 @@ begin
                                   & integer'image(TESTCASE)
                                   severity error;
         end case;
+
+        -- end of simulation
+        -- sim_end_s <= true;
+
+        -- stop the process
+        wait;
+
+    end process; -- stimulus_proc
+
+--------------------------------------------------------------------------------
+-- Processus to test the result of the ALU
+--------------------------------------------------------------------------------
+    observation_proc: process is
+
+        -------------------------------------------------
+        -- Function to convert integer to std_logic_vector
+        ------------------------------------------------
+        function to_std_logic_vect(val : in integer) return std_logic_vector is
+          variable result : std_logic_vector(SIZE-1 downto 0);
+        begin
+          result := std_logic_vector(to_unsigned(val,SIZE));
+          return result;
+        end to_std_logic_vect;
+
+
+        -------------------------------------------------
+        -- Procedure to test the observation
+        ------------------------------------------------
+        procedure test_obs(
+            s_ref : in std_logic_vector(SIZE-1 downto 0);
+            c_ref : in std_logic)
+        is
+        begin
+            logger.log_note("The test was done with mode = " & integer'image(to_integer(unsigned(mode_sti))));
+
+            -------------------------------------------------
+            -- Testing of the results
+            ------------------------------------------------
+            if mode_sti = c_EQUAL then
+                if s_obs(0)=s_ref(0) then
+                    logger.log_note("Result output was right for comparison");
+                else
+                    logger.log_error("Result output was false for comparison");
+                end if;
+            elsif s_obs /= s_ref then
+                case mode_sti is
+                    when c_ADD => logger.log_error("Result output was false for addition");
+                    when c_SUB => logger.log_error("Result output was false for substraction");
+                    when c_OR => logger.log_error("Result output was false for OR operation");
+                    when c_AND => logger.log_error("Result output was false for AND operation");
+                    when c_A => logger.log_error("Result output was false for A");
+                    when c_B => logger.log_error("Result output was false for B");
+                    --when c_EQUAL => logger.log_error("Result for comparison is false");
+                    when c_NULL => logger.log_error("Result is not 0");
+                    when others => report "Unsupported mode_sti";
+                end case;
+            else
+                --report "output was successfully verified";
+                case mode_sti is
+                    when "000" =>
+                        logger.log_note("Result output was right for addition");
+                        -------------------------------------------------
+                        -- Testing of the carry
+                        ------------------------------------------------
+                        if c_obs /= c_ref then
+                            logger.log_error("Carry output was false for addition");
+                        else
+                            logger.log_note("Carry output was successfully verified");
+                        end if;
+                    when "001" =>
+                        logger.log_note("Result output was right for substraction");
+                        -------------------------------------------------
+                        -- Testing of the carry
+                        ------------------------------------------------
+                        if c_obs /= c_ref then
+                            logger.log_error("Carry output was false for substraction");
+                        else
+                            logger.log_note("Carry output was successfully verified");
+                        end if;
+                    when c_OR => logger.log_note("Result output was right for OR operation");
+                    when c_AND => logger.log_note("Result output was right for AND operation");
+                    when c_A => logger.log_note("Result output was right for A");
+                    when c_B => logger.log_note("Result output was right for B");
+                    --when c_EQUAL => logger.log_note("Result for comparison is right");
+                    when c_NULL => logger.log_note("Result is 0");
+                    when others => report "Unsupported mode_sti";
+                end case;
+            end if;
+        end test_obs;
+
+    begin
+
+        for i in 0 to 7 loop
+            wait until rising_edge(clk_sti);
+            wait for 2 ns;
+            case i is
+                -- Addition
+                when 0 => test_obs(to_std_logic_vect(0),'1');
+                -- Substraction
+                when 1 => test_obs((others => '0'),'0');
+                -- OR
+                when 2 => test_obs((others => '1'),'0');
+                -- AND
+                when 3 => test_obs((others => '0'),'0');
+                -- A
+                when 4 => test_obs(to_std_logic_vect(24),'0');
+                -- B
+                when 5 => test_obs(to_std_logic_vect(53),'0');
+                -- A = B
+                when 6 => test_obs(to_std_logic_vect(1),'0');
+                -- 0
+                when 7 => test_obs((others => '0'),'0');
+                when others => report "Unsupported mode";
+            end case;
+        end loop;
+
+        logger.log_warning("The number of error is " & integer'image(logger.get_error_counter));
+        if logger.get_error_counter /= 0 then
+            logger.log_warning("ALU is unsuccessfully verified");
+        else
+            logger.log_warning("ALU is successfully verified");
+        end if;
+
 
         -- end of simulation
         sim_end_s <= true;
