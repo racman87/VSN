@@ -55,7 +55,7 @@ begin
         variable trans2_v : transaction_t;
     begin
 
-        logger.write_disable_file;
+        logger.write_enable_file;
         logger.set_severity(note);
         --logger.set_log_file("test.log");
         logger.log_error("essai de logger_example_tb");

@@ -78,7 +78,7 @@ architecture testbench of alu_tb is
     end component;
 
     --------------------------------------------------------
-    --State of the state machine for the LCD send DATA
+    --Wich mode for the ALU
     --------------------------------------------------------
     subtype t_mode is std_logic_vector(2 downto 0);
     --State description
@@ -125,10 +125,9 @@ begin
 -- Processus to set the stimulus
 --------------------------------------------------------------------------------
     stimulus_proc: process is
-        variable a, b, c: integer; --random integers
-        variable seed1, seed2: positive;    --seeds
-        variable rand: real;                --random output
-        --variable ref : std_logic_vector(SIZE-1 downto 0) := (others => '0');
+        variable a, b, c      : integer; --random integers
+        variable seed1, seed2 : positive; --seeds
+        variable rand         : real; --random output
 
         -------------------------------------------------
         -- Function to convert integer to std_logic_vector
@@ -153,13 +152,27 @@ begin
             mode_sti <= mode;
         end set_sti;
 
+        -------------------------------------------------
+        -- Function du calculate de result of the operation
+        -- for the random tests
+        ------------------------------------------------
         function create_ref(a,b,c : in integer) return std_logic_vector is
             variable sum : integer;
             variable result : std_logic_vector(SIZE-1 downto 0);
+            variable a_s: std_logic_vector(SIZE downto 0);
+          	variable b_s: std_logic_vector(SIZE downto 0);
+          	variable s_s: std_logic_vector(SIZE downto 0);
         begin
+            a_s:="0" & to_std_logic_vect(a);
+            b_s:="0" & to_std_logic_vect(b);
+
             case c is
-                when 0 => result := to_std_logic_vect(a + b);
-                when 1 => result := to_std_logic_vect(a - b);
+                when 0 =>
+                    s_s:=std_logic_vector(unsigned(a_s)+unsigned(b_s));
+                    result := s_s(7 downto 0);
+                when 1 =>
+                    s_s:=std_logic_vector(unsigned(a_s)-unsigned(b_s));
+                    result := s_s(7 downto 0);
                 when 2 => result := to_std_logic_vect(a) OR to_std_logic_vect(b);
                 when 3 => result := to_std_logic_vect(a) AND to_std_logic_vect(b);
                 when 4 => result := to_std_logic_vect(a);
@@ -177,32 +190,55 @@ begin
             return result;
         end create_ref;
 
+        -------------------------------------------------
+        -- Function du calculate the carry of the operation
+        -- add and sub for the random tests
+        ------------------------------------------------
         function create_carry(a,b,c : in integer) return std_logic is
             variable result : std_logic;
             variable value,a_s,b_s : std_logic_vector(SIZE downto 0);
+            variable mode : std_logic_vector(2 downto 0);
         begin
             a_s:="0" & to_std_logic_vect(a);
             b_s:="0" & to_std_logic_vect(b);
+
             case c is
                 when 0 =>
                     value :=std_logic_vector(unsigned(a_s)+unsigned(b_s));-- a + b;
+                    mode := "000";
                 when 1 =>
                     value := std_logic_vector(unsigned(a_s)-unsigned(b_s));--a - b;
+                    mode := "001";
                 when others => report "Unsupported mode_sti";
             end case;
 
-            result:='1';
-            if (c=0) then
-              result:=value(SIZE);
-            end if;
+            if ((ERRNO mod 2)=0) then
+        			result:='0';
+        		else
+        			result:='1';
+        		end if;
+        		if (mode(2 downto 1)="00") then
+        			result:=value(SIZE);
+        			if ERRNO=16 then
+        				result := not value(SIZE);
+        			end if;
+        		end if;
+
             return result;
         end create_carry;
 
     begin
+
+        -------------------------------------------------
+        -- Set the parameters for the log
+        ------------------------------------------------
         logger.write_enable_file;
         logger.set_severity(warning);
         logger.log_warning("Starting simulation with ERRNO = " & integer'image(ERRNO));
 
+        -------------------------------------------------
+        -- Set one case for each operation
+        ------------------------------------------------
         for i in 0 to 7 loop
             wait until falling_edge(clk_sti);
             wait for 2 ns;
@@ -219,8 +255,10 @@ begin
             end case;
         end loop;
 
-      -- Random tests
-      for i in 0 to (10-1) loop -- mettre 100 à la place de 10
+        -------------------------------------------------
+        -- Test 1000 random tests
+        ------------------------------------------------
+      for i in 0 to (1000-1) loop
           wait until falling_edge(clk_sti);
           wait for 2 ns;
           -- Generate random stimulus betwwen 0..65535
@@ -230,7 +268,7 @@ begin
           UNIFORM(seed1, seed2, rand);
           b := INTEGER(TRUNC(REAL(65535)*rand));
           b_sti <= to_std_logic_vect(b);
-          -- Generate random stimulus betwwen 0..65535
+          -- Generate random stimulus betwwen 0..7
           UNIFORM(seed1, seed2, rand);
           c := INTEGER(TRUNC(REAL(7)*rand));
 
@@ -260,9 +298,6 @@ begin
                                   & integer'image(TESTCASE)
                                   severity error;
         end case;
-
-        -- end of simulation
-        -- sim_end_s <= true;
 
         -- stop the process
         wait;
@@ -352,6 +387,9 @@ begin
 
     begin
 
+        -------------------------------------------------
+        -- Test one case for each operation
+        ------------------------------------------------
         for i in 0 to 7 loop
             wait until rising_edge(clk_sti);
             wait for 2 ns;
@@ -377,8 +415,10 @@ begin
         end loop;
 
 
-        -- Random tests
-        for i in 0 to (10-1) loop -- mettre 100 à la place de 10
+        -------------------------------------------------
+        -- 1000 random tests
+        ------------------------------------------------
+        for i in 0 to (1000-1) loop -- mettre 100 à la place de 10
             wait until rising_edge(clk_sti);
             wait for 2 ns;
             logger.log_note("The random mode is = " & integer'image(to_integer(unsigned(mode_sti))));
@@ -403,6 +443,10 @@ begin
             end case;
         end loop;
 
+
+        -------------------------------------------------
+        -- Result of the overal test
+        ------------------------------------------------
         logger.log_warning("The number of error is " & integer'image(logger.get_error_counter));
         if logger.get_error_counter /= 0 then
             logger.log_warning("ALU is unsuccessfully verified");

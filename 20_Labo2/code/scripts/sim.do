@@ -70,28 +70,28 @@ if {$argc>0} {
 
 } else {
   do_all 0 8 0
-  sim_start 0 8 1
-  sim_start 0 8 2
-  sim_start 0 8 3
-  sim_start 0 8 4
-  sim_start 0 8 5
-  sim_start 0 8 6
-  sim_start 0 8 7
-  sim_start 0 8 8
-  sim_start 0 8 9
-  sim_start 0 8 10
-  sim_start 0 8 11
-  sim_start 0 8 12
-  sim_start 0 8 13
-  sim_start 0 8 14
-  sim_start 0 8 15
-  sim_start 0 8 16
-  sim_start 0 8 17
-  sim_start 0 8 18
-  sim_start 0 8 19
-  sim_start 0 8 20
-  sim_start 0 8 21
-  sim_start 0 8 22
-  sim_start 0 8 23
-  sim_start 0 8 24
+#  sim_start 0 8 1
+#  sim_start 0 8 2
+#  sim_start 0 8 3
+#  sim_start 0 8 4
+#  sim_start 0 8 5
+#  sim_start 0 8 6
+#  sim_start 0 8 7
+#  sim_start 0 8 8
+#  sim_start 0 8 9
+#  sim_start 0 8 10
+#  sim_start 0 8 11
+#  sim_start 0 8 12
+#  sim_start 0 8 13
+#  sim_start 0 8 14
+#  sim_start 0 8 15
+#  sim_start 0 8 16
+#  sim_start 0 8 17
+#  sim_start 0 8 18
+#  sim_start 0 8 19
+#  sim_start 0 8 20
+#  sim_start 0 8 21
+#  sim_start 0 8 22
+#  sim_start 0 8 23
+#  sim_start 0 8 24
 }
