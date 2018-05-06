@@ -51,10 +51,36 @@ module math_computer_tb#(integer testcase = 0,
     endclocking
 
 
+
+    //**************************************************************
+    // Coverage (je ne vois pas trop comment faire des boites pour
+    // les sorties, ca dépend des boites faite pour les entrées?!?!)
+    //**************************************************************
+    /*covergroup cov_group_out;
+        cov_res: coverpoint cb.result;
+    endgroup*/
+
+    covergroup cov_group_out;
+        option.at_least = 200;
+        cov_res: coverpoint cb.result{
+            bins tout= {[0:(2**(`DATASIZE-1))]}; //un peu bête comme test...
+        }
+    endgroup
+
+    cov_group_out cg_inst = new;
+
+
+    //**********
+    //variables
+    //**********
     //Number of errors detected
     int errors = 0;
+
+    //Number of test to obtain 100% coverture
+    integer cov_num = 0;
+
     //**************************************************************
-    //
+    // Class to generate random constraint input value
     //**************************************************************
     class random_input;
         rand logic[`DATASIZE-1:0] a;
@@ -86,6 +112,51 @@ module math_computer_tb#(integer testcase = 0,
 
         //a need to be randomize first and after b and finally c
         constraint order {solve a before b; solve b before c;}
+
+
+        //if (`DATASIZE > 8) begin
+
+            // Generating coverture box
+            // 0-3, 4-7, 8-11, 12-15
+            covergroup cov_group;
+                cov_dataa: coverpoint a {
+                    //ignore_bins petit = {[0:(2**(`DATASIZE-4))]};
+                    bins petits = {[0:(2**3)]};
+                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
+                    bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                }
+                cov_datab: coverpoint b {
+                    bins petits = {[0:(2**3)]};
+                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
+                    bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                }
+                cov_datac: coverpoint c {
+                    bins petits = {[0:(2**3)]};
+                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
+                    bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                }
+                cov_cross : cross a,b;
+            endgroup
+
+            function new;
+              cov_group = new;
+            endfunction : new
+
+        /*end
+        else begin
+
+            //Creat a coverture group for all the input signal
+            covergroup cov_group;
+            	cov_dataa: coverpoint a;
+            	cov_datab: coverpoint b;
+              cov_datac: coverpoint c;
+            endgroup
+
+            function new;
+              cov_group = new;
+            endfunction : new
+        end*/
+
     endclass
 
 
@@ -117,6 +188,9 @@ module math_computer_tb#(integer testcase = 0,
         end
     endtask
 
+    //Instance of random class for value a,b and c
+    random_input data;
+
     //**************************************************************
     // Task for the testcase1
     //**************************************************************
@@ -137,15 +211,29 @@ module math_computer_tb#(integer testcase = 0,
         cb.rst <= 0;
         ##10;
 
-        //Test 10 result
-        repeat(10) begin
+        //Generation of random data for a,b and c
+        //random_input data;
+        //Create new instance of data
+        data = new();
+
+        //Test 10 results
+        //repeat(10) begin
+
+        //while ($get_coverage() < 100) begin //Every coverture
+        while (data.cov_group.get_coverage() < 100) begin //Input coverture
+        //while (cg_inst.get_inst_coverage() < 100) begin //Output coverture
+
+            $display("Total coverage is %d",$get_coverage()) ;
+            $display("Input coverage is %d",data.cov_group.get_coverage()) ;
+            $display("Output coverage is %d",cg_inst.get_inst_coverage()) ;
 
             //Generation of random data for a,b and c
-            random_input data;
+            //random_input data;
             //Create new instance of data
-            data = new();
+            //data = new();
             //Randomize all the variable "rand" in data
             assert(data.randomize()) else $error("No solution for data.randomize");
+            data.cov_group.sample();
 
             cb.a <= data.a;
             cb.b <= data.b;
@@ -170,6 +258,9 @@ module math_computer_tb#(integer testcase = 0,
             $display("Result is %d", cb.result);
             $display("Result calculation is %d", (cb.a + cb.b));
 
+            //Sample result to check the coverage
+            cg_inst.sample();
+
             //Check if the result is right
             if (cb.result == (cb.a + cb.b)) begin
                 $display("The result of the addition is CORRECT");
@@ -179,6 +270,9 @@ module math_computer_tb#(integer testcase = 0,
                 errors = errors + 1;
             end
 
+            //Number of test
+            cov_num++;
+
             //Put valid and ready to low for the next calculation
             cb.input_valid <= 0;
             cb.output_ready <= 0;
@@ -187,18 +281,30 @@ module math_computer_tb#(integer testcase = 0,
     endtask
 
 
+    task wait_for_coverage();
+        do
+            @(posedge clk);
+        while (cg_inst.get_inst_coverage() < 100);
+    endtask
+
+
 
     // Programme lancé au démarrage de la simulation
     program TestSuite;
         initial begin
-            if (testcase == 0)
-                test_case0();
-            if (testcase == 1)
-                test_case1();
-            else
-                $display("Ach, test case not yet implemented");
+            fork
+              if (testcase == 0)
+                  test_case0();
+              if (testcase == 1)
+                  test_case1();
+              else
+                  $display("Ach, test case not yet implemented");
+              wait_for_coverage();
+            join
+            disable fork;
             $display("done!");
             $display("The number of error is : %d", errors);
+            $display("The number of test is : %d", cov_num);
             $stop;
         end
     endprogram
