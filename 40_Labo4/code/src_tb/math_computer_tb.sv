@@ -14,6 +14,9 @@ Date   : 13.04.2017
 | Modifications |--------------------------------------------------------------
 Ver    Date         Who    Description
 1.0    13.04.2017   YTA    First version
+2.0    02.05.2017   MRA    Modify with EX1
+3.0    02.05.2017   MRA    Modify with EX2
+3.0    09.05.2017   MRA    Modify with EX3
 
 ******************************************************************************/
 
@@ -111,9 +114,11 @@ module math_computer_tb#(integer testcase = 0,
         }
 
         //a need to be randomize first and after b and finally c
-        constraint order {solve a before b; solve b before c;}
+        constraint order {solve a before b;
+                          solve b before c;}
 
 
+        //IL n'est pas possible de faire un "if" dans une calsse?
         //if (`DATASIZE > 8) begin
 
             // Generating coverture box
@@ -121,21 +126,27 @@ module math_computer_tb#(integer testcase = 0,
             covergroup cov_group;
                 cov_dataa: coverpoint a {
                     //ignore_bins petit = {[0:(2**(`DATASIZE-4))]};
-                    bins petits = {[0:(2**3)]};
-                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
+                    //bins min = {0};
+                    bins petits = {[0:10]};
+                    ignore_bins moyens = {[10:(2**(`DATASIZE-5))]};
                     bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                    //bins max = {(2**(`DATASIZE-1))};
                 }
                 cov_datab: coverpoint b {
+                    //bins min = {0};
                     bins petits = {[0:(2**3)]};
-                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
+                    ignore_bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
                     bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                    //bins max = {(2**(`DATASIZE-1))};
                 }
                 cov_datac: coverpoint c {
-                    bins petits = {[0:(2**3)]};
-                    bins moyens = {[(2**3):(2**(`DATASIZE-5))]};
-                    bins grands = {[(2**(`DATASIZE-4)):(2**(`DATASIZE-1))]};
+                    //permet de séparer l'intervalle en 10 paquets égaux
+                    bins tenpaquet[10] = {[0:(2**(`DATASIZE-1))]};
                 }
-                cov_cross : cross a,b;
+
+                //Pas tout compris... une condition n'est jamais validée....
+                //cov_cross : cross cov_dataa,cov_datab;
+
             endgroup
 
             function new;
@@ -270,6 +281,10 @@ module math_computer_tb#(integer testcase = 0,
                 errors = errors + 1;
             end
 
+            /*if (cb.b == (2**(`DATASIZE-1))) begin
+                errors = errors +1;
+            end*/
+
             //Number of test
             cov_num++;
 
@@ -295,7 +310,7 @@ module math_computer_tb#(integer testcase = 0,
             fork
               if (testcase == 0)
                   test_case0();
-              if (testcase == 1)
+              else if (testcase == 1)
                   test_case1();
               else
                   $display("Ach, test case not yet implemented");
