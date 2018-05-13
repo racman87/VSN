@@ -36,11 +36,19 @@ proc sim_start {AVALONMODE TESTCASE} {
     0 {
         # Add corresponding assertions
         add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_waitreq1
-
+        add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_stable
+        add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_stable_write
+        add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_read_stable
+        add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_read
+        add wave /avalon_assertions_wrapper/duv/binded/assert_waitrequest/assert_readdatavalid
     }
     1 {
         # Add corresponding assertions
-
+        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_fixed1
+        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_read
+        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_write
+        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_read1
+        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_write1
     }
     2 {
         # Add corresponding assertions
