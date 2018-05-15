@@ -47,20 +47,23 @@ proc sim_start {AVALONMODE TESTCASE} {
         add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_fixed1
         add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_read
         add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_write
-        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_read1
-        add wave /avalon_assertions_wrapper/duv/binded/assert_fixed/assert_stable_write1
     }
     2 {
         # Add corresponding assertions
-
+        add wave /avalon_assertions_wrapper/duv/binded/assert_pipeline_variable/assert_stable
+        add wave /avalon_assertions_wrapper/duv/binded/assert_pipeline_variable/assert_counter
+        add wave /avalon_assertions_wrapper/duv/binded/assert_pipeline_variable/assert_readdatavalid
     }
     3 {
         # Add corresponding assertions
-
+        add wave /avalon_assertions_wrapper/duv/binded/assert_pipeline_fixed/assert_stable
+        add wave /avalon_assertions_wrapper/duv/binded/assert_pipeline_fixed/assert_readdatavalid
     }
     4 {
         # Add corresponding assertions
-
+        add wave /avalon_assertions_wrapper/duv/binded/assert_burst/assert_stable_waitreq
+        add wave /avalon_assertions_wrapper/duv/binded/assert_burst/assert_readaddr_stable
+        add wave /avalon_assertions_wrapper/duv/binded/assert_burst/assert_readdatavalid
     }
   }
   run -all
